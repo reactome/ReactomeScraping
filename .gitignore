@@ -1,0 +1,19 @@
+# Scraped HTML files
+scraped_pages/
+What%20is%20Reactome*
+
+# Converted MDX files
+mdx_pages/
+
+# Logs
+*.log
+scraper.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Original HTML sample
+What\ is\ Reactome*
