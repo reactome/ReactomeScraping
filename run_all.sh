@@ -56,10 +56,16 @@ $PYTHON fix_categories.py
 echo "✓ Categories fixed"
 
 echo ""
-echo "Step 7/7: Fixing MDX image paths..."
+echo "Step 7/8: Fixing MDX image paths..."
 echo "----------------------------------------"
 $PYTHON fix_mdx_image_paths.py
 echo "✓ MDX image paths fixed"
+
+echo ""
+echo "Step 8/8: Renaming item-page.mdx to index.mdx..."
+echo "----------------------------------------"
+$PYTHON rename_to_index.py
+echo "✓ Files renamed to index.mdx"
 
 echo ""
 echo "================================"

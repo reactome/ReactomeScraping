@@ -302,9 +302,44 @@ python3 fix_mdx_image_paths.py
 
 ---
 
+# Rename to Index
+
+Renames remaining `item-page.mdx` files to `index.mdx` for cleaner URLs.
+
+## Usage
+
+```bash
+python3 rename_to_index.py
+```
+
+## What It Does
+
+Converts structures like:
+```
+mdx_pages/
+└── documentation/
+    └── item-page.mdx
+```
+
+To:
+```
+mdx_pages/
+└── documentation/
+    └── index.mdx
+```
+
+---
+
 # Complete Workflow
 
 To scrape and convert the Reactome website to MDX:
+
+```bash
+# Run all steps automatically
+./run_all.sh
+```
+
+Or run each step individually:
 
 ```bash
 # 1. Scrape pages and images from reactome.org
@@ -327,6 +362,9 @@ python3 fix_categories.py
 
 # 7. Fix any remaining image path issues in MDX files
 python3 fix_mdx_image_paths.py
+
+# 8. Rename remaining item-page.mdx to index.mdx
+python3 rename_to_index.py
 ```
 
 ## Script Descriptions
@@ -340,6 +378,7 @@ python3 fix_mdx_image_paths.py
 | `flatten_folders.py` | Renames `item-page.mdx` files to parent folder names |
 | `fix_categories.py` | Updates category frontmatter to match file locations |
 | `fix_mdx_image_paths.py` | Fixes image paths in MDX after reorganization |
+| `rename_to_index.py` | Renames remaining `item-page.mdx` to `index.mdx` |
 
 ## Output
 
