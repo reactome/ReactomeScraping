@@ -263,23 +263,86 @@ This creates cleaner URLs and simpler file organization for static site generato
 
 ---
 
-# Complete Workflow
+# Fix Image Paths
 
-To scrape and convert the Reactome website:
+Fixes broken image references in scraped HTML files caused by the scraper's deduplication logic.
+
+## Usage
 
 ```bash
-# 1. Scrape pages and images
+python3 fix_image_paths.py
+```
+
+## What It Does
+
+The scraper has a bug where the same image URL downloaded by multiple pages results in different relative paths in HTML, but the image is only saved at the first location encountered. This script:
+
+1. Builds an index of all existing images by filename
+2. Scans HTML files for image references
+3. Identifies references pointing to non-existent paths
+4. Copies images from their actual location to expected locations
+
+---
+
+# Fix MDX Image Paths
+
+Fixes image paths in MDX files to match the actual image locations after flattening and reorganization.
+
+## Usage
+
+```bash
+python3 fix_mdx_image_paths.py
+```
+
+## What It Does
+
+1. Fixes malformed image references (trailing `>` characters)
+2. Updates paths for flattened images (e.g., `folder/subfolder/image.png` → `folder/subfolder.png`)
+3. Resolves general path mismatches by looking up images by filename
+
+---
+
+# Complete Workflow
+
+To scrape and convert the Reactome website to MDX:
+
+```bash
+# 1. Scrape pages and images from reactome.org
 python3 scraper.py
 
-# 2. Convert HTML to MDX
+# 2. Fix image path issues in scraped HTML files
+python3 fix_image_paths.py
+
+# 3. Convert HTML to MDX format
 python3 convert_to_mdx.py
 
-# 3. Reorganize pages to match nav structure
+# 4. Reorganize pages to match desired nav structure
 python3 reorganize_pages.py
 
-# 4. Fix category metadata
+# 5. Flatten folder structure (rename item-page.mdx to parent folder name)
+python3 flatten_folders.py
+
+# 6. Fix category metadata in frontmatter to match new locations
 python3 fix_categories.py
 
-# 5. Flatten folder structure (optional)
-python3 flatten_folders.py
+# 7. Fix any remaining image path issues in MDX files
+python3 fix_mdx_image_paths.py
 ```
+
+## Script Descriptions
+
+| Script | Purpose |
+|--------|---------|
+| `scraper.py` | Crawls reactome.org and saves HTML pages + images |
+| `fix_image_paths.py` | Fixes missing image references in scraped HTML |
+| `convert_to_mdx.py` | Converts HTML to MDX with frontmatter metadata |
+| `reorganize_pages.py` | Moves pages to match navigation structure |
+| `flatten_folders.py` | Renames `item-page.mdx` files to parent folder names |
+| `fix_categories.py` | Updates category frontmatter to match file locations |
+| `fix_mdx_image_paths.py` | Fixes image paths in MDX after reorganization |
+
+## Output
+
+After running all scripts, you'll have:
+- `scraped_pages/` - Original HTML files and images
+- `mdx_pages/` - Converted MDX files with proper structure and working image paths
