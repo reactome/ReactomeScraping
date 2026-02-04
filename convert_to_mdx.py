@@ -8,6 +8,7 @@ For articles (news, spotlight): Title, Author (if present), Date, tags, body
 
 import os
 import re
+import shutil
 import argparse
 import logging
 from pathlib import Path
@@ -38,6 +39,63 @@ def get_html_converter():
     h.ignore_tables = False
     h.single_line_break = False
     return h
+
+
+def copy_images_for_page(input_dir, output_dir, category):
+    """
+    Copy images from scraped_pages/images/<category> to mdx_pages/images/<category>.
+    Returns the mapping of source to destination paths.
+    """
+    if not category:
+        return {}
+    
+    src_image_dir = os.path.join(input_dir, 'images', category)
+    dst_image_dir = os.path.join(output_dir, 'images', category)
+    
+    if not os.path.exists(src_image_dir):
+        return {}
+    
+    os.makedirs(dst_image_dir, exist_ok=True)
+    
+    copied = {}
+    for filename in os.listdir(src_image_dir):
+        src_path = os.path.join(src_image_dir, filename)
+        dst_path = os.path.join(dst_image_dir, filename)
+        
+        if os.path.isfile(src_path):
+            shutil.copy2(src_path, dst_path)
+            copied[filename] = dst_path
+            logger.debug(f"Copied image: {src_path} -> {dst_path}")
+    
+    return copied
+
+
+def fix_image_paths_in_html(soup, category, output_dir):
+    """
+    Update image src attributes to use proper relative paths for MDX.
+    Images are stored at: mdx_pages/images/<category>/<filename>
+    MDX files are at: mdx_pages/<category>/<file>.mdx
+    
+    So from the MDX file, the relative path to images is: ../images/<category>/<filename>
+    Or we can use absolute paths from the mdx_pages root: /images/<category>/<filename>
+    """
+    for img in soup.find_all('img'):
+        src = img.get('src', '')
+        
+        # Handle paths that were already processed by the scraper
+        # Format: images/<page_route>/<filename>
+        if src.startswith('images/'):
+            # Extract just the filename and rebuild the path
+            parts = src.split('/')
+            if len(parts) >= 3:
+                # Keep the structure: images/<category>/<filename>
+                # This will be converted to markdown and work relative to mdx_pages root
+                img['src'] = '/' + src  # Make it absolute from site root
+        
+        # Handle data-original-src attribute (kept for reference)
+        # No changes needed
+    
+    return soup
 
 
 def escape_yaml_string(s):
@@ -165,7 +223,7 @@ def extract_tags(soup, category):
     return tags
 
 
-def extract_body(soup):
+def extract_body(soup, category=None, output_dir=None):
     """Extract and convert body content to markdown."""
     converter = get_html_converter()
     
@@ -192,6 +250,10 @@ def extract_body(soup):
               soup.find('div', class_='content') or \
               soup.find('main') or \
               soup
+    
+    # Fix image paths for MDX output
+    if category is not None and output_dir is not None:
+        fix_image_paths_in_html(content, category, output_dir)
     
     # Convert to markdown
     html_content = str(content)
@@ -243,6 +305,9 @@ def convert_file(input_path, output_dir, input_dir):
         title = extract_title(soup)
         category = get_category_from_path(input_path, input_dir)
         
+        # Copy images for this page
+        copy_images_for_page(input_dir, output_dir, category)
+        
         # Determine if this is an article or a page
         is_article = is_article_page(input_path, category)
         
@@ -268,8 +333,8 @@ def convert_file(input_path, output_dir, input_dir):
         frontmatter_lines.append('---')
         frontmatter = '\n'.join(frontmatter_lines)
         
-        # Extract body content
-        body = extract_body(soup)
+        # Extract body content (with image path fixing)
+        body = extract_body(soup, category, output_dir)
         
         # Combine into MDX
         mdx_content = f"{frontmatter}\n\n{body}\n"

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
 Reorganize mdx_pages to match the nav structure.
+Also handles moving corresponding images from the images directory.
 """
 
 import os
+import re
 import shutil
 
 MDX_DIR = "mdx_pages"
+IMAGES_DIR = os.path.join(MDX_DIR, "images")
 
 # Define moves: (source, destination)
 # Paths are relative to MDX_DIR
@@ -41,6 +44,60 @@ MOVES = [
 ]
 
 
+def move_images(src_rel, dst_rel):
+    """Move images from old location to new location to match page reorganization."""
+    src_images = os.path.join(IMAGES_DIR, src_rel)
+    dst_images = os.path.join(IMAGES_DIR, dst_rel)
+    
+    if not os.path.exists(src_images):
+        return False
+    
+    if os.path.exists(dst_images):
+        print(f"Skip images (destination exists): {dst_images}")
+        return False
+    
+    # Create parent directory if needed
+    os.makedirs(os.path.dirname(dst_images), exist_ok=True)
+    
+    # Move the images directory
+    shutil.move(src_images, dst_images)
+    print(f"Moved images: {src_images} -> {dst_images}")
+    return True
+
+
+def update_image_paths_in_mdx(dst_path, src_rel, dst_rel):
+    """
+    Update image paths in MDX files after reorganization.
+    Image paths change from /images/<src_rel>/... to /images/<dst_rel>/...
+    """
+    if not os.path.exists(dst_path):
+        return
+    
+    # Process all MDX files in the destination
+    for root, dirs, files in os.walk(dst_path):
+        for filename in files:
+            if not filename.endswith('.mdx'):
+                continue
+            
+            filepath = os.path.join(root, filename)
+            
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Replace image paths: /images/<src_rel>/ -> /images/<dst_rel>/
+                old_path = f'/images/{src_rel}/'
+                new_path = f'/images/{dst_rel}/'
+                
+                if old_path in content:
+                    updated_content = content.replace(old_path, new_path)
+                    with open(filepath, 'w', encoding='utf-8') as f:
+                        f.write(updated_content)
+                    print(f"Updated image paths in: {filepath}")
+            except Exception as e:
+                print(f"Error updating {filepath}: {e}")
+
+
 def main():
     for src_rel, dst_rel in MOVES:
         src = os.path.join(MDX_DIR, src_rel)
@@ -48,6 +105,8 @@ def main():
         
         if not os.path.exists(src):
             print(f"Skip (not found): {src}")
+            # Still try to move images even if pages don't exist
+            move_images(src_rel, dst_rel)
             continue
         
         if os.path.exists(dst):
@@ -57,9 +116,15 @@ def main():
         # Create parent directory if needed
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         
-        # Move
+        # Move pages
         shutil.move(src, dst)
         print(f"Moved: {src} -> {dst}")
+        
+        # Move corresponding images
+        move_images(src_rel, dst_rel)
+        
+        # Update image paths in the moved MDX files
+        update_image_paths_in_mdx(dst, src_rel, dst_rel)
     
     print("\nDone!")
 

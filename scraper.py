@@ -13,6 +13,7 @@ import os
 import re
 import time
 import logging
+import hashlib
 from urllib.parse import urljoin, urlparse
 from collections import deque
 
@@ -23,7 +24,7 @@ from bs4 import BeautifulSoup
 BASE_URL = "https://reactome.org"
 OUTPUT_DIR = "scraped_pages"
 DELAY_BETWEEN_REQUESTS = 1.0  # seconds, be polite to the server
-MAX_PAGES = None  # Set to a number to limit pages, None for unlimited
+MAX_PAGES = 1000  # Set to a number to limit pages, None for unlimited
 REQUEST_TIMEOUT = 30
 
 # Setup logging
@@ -45,6 +46,7 @@ class ReactomeScraper:
         self.delay = delay
         self.max_pages = max_pages
         self.visited_urls = set()
+        self.downloaded_images = set()  # Track downloaded images to avoid duplicates
         self.urls_to_visit = deque()
         self.session = requests.Session()
         self.session.headers.update({
@@ -97,6 +99,105 @@ class ReactomeScraper:
         
         return path
     
+    def get_image_local_path(self, img_url, page_route):
+        """
+        Determine the local path for an image based on the page route.
+        Images are stored in: scraped_pages/images/<page_route>/<filename>
+        """
+        parsed = urlparse(img_url)
+        
+        # Get the original filename
+        original_filename = os.path.basename(parsed.path)
+        if not original_filename:
+            # Generate filename from URL hash
+            url_hash = hashlib.md5(img_url.encode()).hexdigest()[:10]
+            original_filename = f"image_{url_hash}.png"
+        
+        # Clean up the filename
+        original_filename = re.sub(r'[^\w\-_\.]', '_', original_filename)
+        
+        # Build the path: images/<page_route>/<filename>
+        image_dir = os.path.join(self.output_dir, 'images', page_route)
+        local_path = os.path.join(image_dir, original_filename)
+        
+        return local_path, original_filename
+    
+    def download_image(self, img_url, page_route):
+        """
+        Download an image and save it locally.
+        Returns the relative path to the image from the page's perspective.
+        """
+        # Normalize the image URL
+        if img_url.startswith('//'):
+            img_url = 'https:' + img_url
+        
+        # Skip data URLs
+        if img_url.startswith('data:'):
+            return None
+        
+        # Check if already downloaded
+        if img_url in self.downloaded_images:
+            local_path, filename = self.get_image_local_path(img_url, page_route)
+            # Return relative path from page to image
+            return os.path.join('images', page_route, filename)
+        
+        try:
+            response = self.session.get(img_url, timeout=REQUEST_TIMEOUT, stream=True)
+            response.raise_for_status()
+            
+            # Verify it's an image
+            content_type = response.headers.get('Content-Type', '')
+            if not any(t in content_type for t in ['image/', 'application/octet-stream']):
+                logger.debug(f"Skipping non-image content: {img_url}")
+                return None
+            
+            local_path, filename = self.get_image_local_path(img_url, page_route)
+            
+            # Create directory if needed
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            
+            # Write the image
+            with open(local_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            self.downloaded_images.add(img_url)
+            logger.info(f"Downloaded image: {img_url} -> {local_path}")
+            
+            # Return relative path from page to image
+            return os.path.join('images', page_route, filename)
+            
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Failed to download image {img_url}: {e}")
+            return None
+        except Exception as e:
+            logger.warning(f"Error saving image {img_url}: {e}")
+            return None
+    
+    def process_images_in_content(self, soup, current_url, page_route):
+        """
+        Find all images in the content, download them, and update src attributes.
+        Returns the modified soup.
+        """
+        for img in soup.find_all('img'):
+            src = img.get('src')
+            if not src:
+                continue
+            
+            # Convert relative URLs to absolute
+            absolute_url = urljoin(current_url, src)
+            
+            # Download the image
+            local_path = self.download_image(absolute_url, page_route)
+            
+            if local_path:
+                # Update the src to point to local image
+                # Path is relative from scraped_pages root
+                img['src'] = local_path
+                img['data-original-src'] = absolute_url  # Keep original for reference
+        
+        return soup
+    
     def save_content(self, url, item_page_content, blog_post_content):
         """Save extracted content to files organized by route."""
         route_path = self.get_route_path(url)
@@ -140,9 +241,14 @@ class ReactomeScraper:
         item_page_content = None
         blog_post_content = []
         
+        # Get page route for image organization
+        page_route = self.get_route_path(url)
+        
         # Find <div class="item-page">
         item_page = soup.find('div', class_='item-page')
         if item_page:
+            # Process images in this content
+            self.process_images_in_content(item_page, url, page_route)
             item_page_content = str(item_page)
             logger.debug(f"Found item-page in {url}")
         
@@ -158,6 +264,8 @@ class ReactomeScraper:
             blog_posts = soup.find_all('div', class_=re.compile(r'^leading-\d+$'))
         
         for post in blog_posts:
+            # Process images in this content
+            self.process_images_in_content(post, url, page_route)
             blog_post_content.append(str(post))
             logger.debug(f"Found blogpost in {url}")
         
@@ -221,11 +329,15 @@ class ReactomeScraper:
         if start_urls is None:
             start_urls = [self.base_url]
         
+        # Track URLs already queued to avoid duplicates in the queue
+        queued_urls = set()
+        
         # Initialize queue with start URLs
         for url in start_urls:
             normalized = self.normalize_url(url)
-            if normalized not in self.visited_urls:
+            if normalized not in self.visited_urls and normalized not in queued_urls:
                 self.urls_to_visit.append(normalized)
+                queued_urls.add(normalized)
         
         pages_scraped = 0
         
@@ -244,10 +356,11 @@ class ReactomeScraper:
             
             new_links = self.scrape_page(url)
             
-            # Add new links to queue
+            # Add new links to queue (only if not visited and not already queued)
             for link in new_links:
-                if link not in self.visited_urls:
+                if link not in self.visited_urls and link not in queued_urls:
                     self.urls_to_visit.append(link)
+                    queued_urls.add(link)
             
             pages_scraped += 1
             
