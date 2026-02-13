@@ -11,6 +11,7 @@ import re
 import shutil
 import argparse
 import logging
+import uuid
 from pathlib import Path
 from datetime import datetime
 
@@ -255,10 +256,21 @@ def extract_body(soup, category=None, output_dir=None):
     if category is not None and output_dir is not None:
         fix_image_paths_in_html(content, category, output_dir)
     
+    # Preserve <iframe> tags by replacing them with placeholders
+    iframe_map = {}
+    for iframe in content.find_all('iframe'):
+        placeholder = f'IFRAME_PLACEHOLDER_{uuid.uuid4().hex}'
+        iframe_map[placeholder] = str(iframe)
+        iframe.replace_with(placeholder)
+
     # Convert to markdown
     html_content = str(content)
     markdown = converter.handle(html_content)
-    
+
+    # Restore <iframe> tags from placeholders
+    for placeholder, iframe_html in iframe_map.items():
+        markdown = markdown.replace(placeholder, f'\n\n{iframe_html}\n\n')
+
     # Clean up the markdown
     # Remove excessive newlines
     markdown = re.sub(r'\n{3,}', '\n\n', markdown)
