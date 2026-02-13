@@ -468,11 +468,14 @@ def main():
     else:
         seed_urls = get_seed_urls()
     
-    if args.seed_only:
-        # Only scrape the seed URLs
-        for url in seed_urls:
+    if args.urls_file or args.seed_only:
+        # Scrape only the provided URLs, no recursive crawling
+        for i, url in enumerate(seed_urls):
+            if max_pages and i >= max_pages:
+                logger.info(f"Reached maximum pages limit: {max_pages}")
+                break
             if url not in scraper.visited_urls:
-                logger.info(f"Scraping: {url}")
+                logger.info(f"Scraping ({i + 1}/{len(seed_urls)}): {url}")
                 scraper.visited_urls.add(url)
                 scraper.scrape_page(url)
                 time.sleep(scraper.delay)
