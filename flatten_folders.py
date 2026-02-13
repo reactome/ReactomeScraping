@@ -66,9 +66,14 @@ def main():
         if not single_file_folders:
             break
         
+        made_progress = False
         for folder_path, filename in single_file_folders:
             if flatten_folder(folder_path, filename):
                 flattened_count += 1
+                made_progress = True
+        
+        if not made_progress:
+            break
     
     print(f"\nDone! Flattened {flattened_count} folders.")
 
