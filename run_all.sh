@@ -7,6 +7,21 @@ set -e  # Exit on any error
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Parse arguments
+URLS_FILE=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --urls-file|-u)
+            URLS_FILE="$2"
+            shift 2
+            ;;
+        *)
+            echo "Usage: $0 [--urls-file|-u <path-to-json>]"
+            exit 1
+            ;;
+    esac
+done
+
 # Use venv python if available, otherwise system python3
 if [ -f ".venv/bin/python" ]; then
     PYTHON=".venv/bin/python"
@@ -17,12 +32,19 @@ else
 fi
 
 echo "Using Python: $PYTHON"
+if [ -n "$URLS_FILE" ]; then
+    echo "Using URLs file: $URLS_FILE"
+fi
 echo "================================"
 
 echo ""
 echo "Step 1/7: Scraping pages from reactome.org..."
 echo "----------------------------------------"
-$PYTHON scraper.py
+if [ -n "$URLS_FILE" ]; then
+    $PYTHON scraper.py --urls-file "$URLS_FILE" --seed-only
+else
+    $PYTHON scraper.py
+fi
 echo "✓ Scraping complete"
 
 echo ""

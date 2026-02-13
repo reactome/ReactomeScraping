@@ -12,6 +12,7 @@ Files are organized in directories based on their URL routes.
 import os
 import re
 import time
+import json
 import logging
 import hashlib
 from urllib.parse import urljoin, urlparse
@@ -448,6 +449,8 @@ def main():
                         help='Maximum number of pages to scrape')
     parser.add_argument('--seed-only', '-s', action='store_true',
                         help='Only scrape seed URLs, do not crawl further')
+    parser.add_argument('--urls-file', '-u', default=None,
+                        help='Path to a JSON file containing an array of URLs to scrape')
     args = parser.parse_args()
     
     delay = args.delay
@@ -455,7 +458,15 @@ def main():
     
     scraper = ReactomeScraper(output_dir=args.output, delay=delay, max_pages=max_pages)
     
-    seed_urls = get_seed_urls()
+    if args.urls_file:
+        with open(args.urls_file, 'r', encoding='utf-8') as f:
+            seed_urls = json.load(f)
+        if not isinstance(seed_urls, list):
+            logger.error('URLs file must contain a JSON array of strings')
+            return
+        logger.info(f'Loaded {len(seed_urls)} URLs from {args.urls_file}')
+    else:
+        seed_urls = get_seed_urls()
     
     if args.seed_only:
         # Only scrape the seed URLs
