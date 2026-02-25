@@ -76,7 +76,7 @@ class ReactomeScraper:
         
         # Skip API endpoints and special paths
         skip_paths = ['/ContentService', '/AnalysisService', '/PathwayBrowser', 
-                      '/download', '/icon-lib', '/gsa']
+                      '/download', '/icon-lib', '/gsa', '/content/detail']
         if any(parsed.path.startswith(skip) for skip in skip_paths):
             return False
         
