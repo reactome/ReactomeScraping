@@ -1,9 +1,11 @@
 # Scraped HTML files
 scraped_pages/
+input/
 What%20is%20Reactome*
 
 # Converted MDX files
 mdx_pages/
+output/
 
 # Logs
 *.log
