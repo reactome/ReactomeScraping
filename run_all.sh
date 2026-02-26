@@ -37,6 +37,10 @@ if [ -n "$URLS_FILE" ]; then
 fi
 echo "================================"
 
+echo "Step 0/7: Clearing output folders..."
+bash clearfolders.sh
+echo "✓ Output folders cleared"
+
 echo ""
 echo "Step 1/7: Scraping pages from reactome.org..."
 echo "----------------------------------------"
@@ -94,5 +98,5 @@ echo "================================"
 echo "✓ All steps completed successfully!"
 echo ""
 echo "Output directories:"
-echo "  - scraped_pages/  (original HTML files and images)"
-echo "  - mdx_pages/      (converted MDX files with images)"
+echo "  - scraped_pages/  (original HTML files and uploads)"
+echo "  - mdx_pages/      (converted MDX files with uploads)"

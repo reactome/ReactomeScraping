@@ -9,7 +9,7 @@ saved once at the first location.
 This script:
 1. Finds all image references in HTML files
 2. Checks if the referenced image exists
-3. If not, searches for the image by filename in the images directory
+3. If not, searches for the image by filename in the uploads directory
 4. Either creates a copy/symlink or updates the HTML to point to the correct location
 """
 
@@ -19,16 +19,16 @@ import shutil
 from pathlib import Path
 
 
-def find_all_images(images_dir):
+def find_all_uploads(uploads_dir):
     """Build a dictionary mapping filenames to their full paths."""
-    images = {}
-    for root, dirs, files in os.walk(images_dir):
+    uploads = {}
+    for root, dirs, files in os.walk(uploads_dir):
         for f in files:
             full_path = os.path.join(root, f)
-            if f not in images:
-                images[f] = []
-            images[f].append(full_path)
-    return images
+            if f not in uploads:
+                uploads[f] = []
+            uploads[f].append(full_path)
+    return uploads
 
 
 def find_image_references(scraped_dir):
@@ -42,7 +42,7 @@ def find_image_references(scraped_dir):
                     content = fp.read()
                 
                 # Find all image src attributes
-                for match in re.finditer(r'src="(images/[^"]+)"', content):
+                for match in re.finditer(r'src="(uploads/[^"]+)"', content):
                     img_path = match.group(1)
                     references.append({
                         'html_file': html_path,
@@ -52,27 +52,27 @@ def find_image_references(scraped_dir):
     return references
 
 
-def fix_images(scraped_dir='scraped_pages', mode='copy'):
+def fix_uploads(scraped_dir='scraped_pages', mode='copy'):
     """
     Fix missing image references.
     
-    mode: 'copy' - copy images to expected locations
+    mode: 'copy' - copy uploads to expected locations
           'symlink' - create symlinks
-          'update_html' - update HTML to point to existing images
+          'update_html' - update HTML to point to existing uploads
     """
-    images_dir = os.path.join(scraped_dir, 'images')
+    uploads_dir = os.path.join(scraped_dir, 'uploads')
     
     # Build image index
     print("Building image index...")
-    all_images = find_all_images(images_dir)
-    print(f"Found {len(all_images)} unique image filenames")
+    all_uploads = find_all_uploads(uploads_dir)
+    print(f"Found {len(all_uploads)} unique image filenames")
     
     # Find all references
     print("Finding image references in HTML...")
     references = find_image_references(scraped_dir)
     print(f"Found {len(references)} image references")
     
-    # Find missing images
+    # Find missing uploads
     missing = []
     for ref in references:
         if not os.path.exists(ref['full_expected_path']):
@@ -81,22 +81,22 @@ def fix_images(scraped_dir='scraped_pages', mode='copy'):
     print(f"Found {len(missing)} missing image references")
     
     if not missing:
-        print("All images are correctly placed!")
+        print("All uploads are correctly placed!")
         return
     
-    # Fix missing images
+    # Fix missing uploads
     fixed = 0
     not_found = []
     
     for ref in missing:
         filename = os.path.basename(ref['img_ref'])
         
-        if filename not in all_images:
+        if filename not in all_uploads:
             not_found.append(ref)
             continue
         
         # Get the source image path
-        source_path = all_images[filename][0]  # Use first occurrence
+        source_path = all_uploads[filename][0]  # Use first occurrence
         target_path = ref['full_expected_path']
         
         if mode == 'copy':
@@ -134,7 +134,7 @@ def fix_images(scraped_dir='scraped_pages', mode='copy'):
     print(f"\nFixed {fixed} missing image references")
     
     if not_found:
-        print(f"\n{len(not_found)} images could not be found:")
+        print(f"\n{len(not_found)} uploads could not be found:")
         for ref in not_found[:10]:  # Show first 10
             print(f"  - {ref['img_ref']} (referenced in {os.path.basename(ref['html_file'])})")
         if len(not_found) > 10:
@@ -145,9 +145,9 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Fix image path mismatches')
     parser.add_argument('--mode', choices=['copy', 'symlink', 'update_html'], 
-                        default='copy', help='How to fix: copy images, create symlinks, or update HTML')
+                        default='copy', help='How to fix: copy uploads, create symlinks, or update HTML')
     parser.add_argument('--input', '-i', default='scraped_pages',
                         help='Input directory containing scraped HTML files')
     args = parser.parse_args()
     
-    fix_images(args.input, args.mode)
+    fix_uploads(args.input, args.mode)

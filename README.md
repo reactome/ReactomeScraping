@@ -106,7 +106,7 @@ The scraper logs its activity to both:
 - URLs to API endpoints, download pages, and non-HTML resources are automatically skipped
 - Only internal reactome.org links are followed
 - Duplicate URLs are automatically handled
-- Images are automatically downloaded and saved to `scraped_pages/images/<page-route>/`
+- uploads are automatically downloaded and saved to `scraped_pages/uploads/<page-route>/`
 
 ## Customization
 
@@ -144,7 +144,7 @@ Options:
 - Extracts title, category (route), and body content
 - For article pages (news, spotlight): extracts author, date, and tags
 - Converts HTML to clean Markdown using html2text
-- Copies images from `scraped_pages/images/` to `mdx_pages/images/`
+- Copies uploads from `scraped_pages/uploads/` to `mdx_pages/uploads/`
 - Updates image paths to work with the MDX output structure
 
 ## Output Format
@@ -165,7 +165,7 @@ tags: ["news", "release"]   # For articles only
 
 ```
 mdx_pages/
-├── images/
+├── uploads/
 │   ├── about/
 │   │   └── news/
 │   │       └── image.png
@@ -206,7 +206,7 @@ MOVES = [
 ## Features
 
 - Moves page directories to new locations
-- Automatically moves corresponding images from `mdx_pages/images/`
+- Automatically moves corresponding uploads from `mdx_pages/uploads/`
 - Updates image paths within MDX files after reorganization
 - Skips moves if source doesn't exist or destination already exists
 
@@ -277,10 +277,10 @@ python3 fix_image_paths.py
 
 The scraper has a bug where the same image URL downloaded by multiple pages results in different relative paths in HTML, but the image is only saved at the first location encountered. This script:
 
-1. Builds an index of all existing images by filename
+1. Builds an index of all existing uploads by filename
 2. Scans HTML files for image references
 3. Identifies references pointing to non-existent paths
-4. Copies images from their actual location to expected locations
+4. Copies uploads from their actual location to expected locations
 
 ---
 
@@ -297,8 +297,8 @@ python3 fix_mdx_image_paths.py
 ## What It Does
 
 1. Fixes malformed image references (trailing `>` characters)
-2. Updates paths for flattened images (e.g., `folder/subfolder/image.png` → `folder/subfolder.png`)
-3. Resolves general path mismatches by looking up images by filename
+2. Updates paths for flattened uploads (e.g., `folder/subfolder/image.png` → `folder/subfolder.png`)
+3. Resolves general path mismatches by looking up uploads by filename
 
 ---
 
@@ -342,7 +342,7 @@ To scrape and convert the Reactome website to MDX:
 Or run each step individually:
 
 ```bash
-# 1. Scrape pages and images from reactome.org
+# 1. Scrape pages and uploads from reactome.org
 python3 scraper.py
 
 # 2. Fix image path issues in scraped HTML files
@@ -371,7 +371,7 @@ python3 rename_to_index.py
 
 | Script | Purpose |
 |--------|---------|
-| `scraper.py` | Crawls reactome.org and saves HTML pages + images |
+| `scraper.py` | Crawls reactome.org and saves HTML pages + uploads |
 | `fix_image_paths.py` | Fixes missing image references in scraped HTML |
 | `convert_to_mdx.py` | Converts HTML to MDX with frontmatter metadata |
 | `reorganize_pages.py` | Moves pages to match navigation structure |
@@ -383,5 +383,5 @@ python3 rename_to_index.py
 ## Output
 
 After running all scripts, you'll have:
-- `scraped_pages/` - Original HTML files and images
+- `scraped_pages/` - Original HTML files and uploads
 - `mdx_pages/` - Converted MDX files with proper structure and working image paths

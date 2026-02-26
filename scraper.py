@@ -47,7 +47,7 @@ class ReactomeScraper:
         self.delay = delay
         self.max_pages = max_pages
         self.visited_urls = set()
-        self.downloaded_images = set()  # Track downloaded images to avoid duplicates
+        self.downloaded_uploads = set()  # Track downloaded uploads to avoid duplicates
         self.urls_to_visit = deque()
         self.session = requests.Session()
         self.session.headers.update({
@@ -103,7 +103,7 @@ class ReactomeScraper:
     def get_image_local_path(self, img_url, page_route):
         """
         Determine the local path for an image based on the page route.
-        Images are stored in: scraped_pages/images/<page_route>/<filename>
+        uploads are stored in: scraped_pages/uploads/<page_route>/<filename>
         """
         parsed = urlparse(img_url)
         
@@ -117,8 +117,8 @@ class ReactomeScraper:
         # Clean up the filename
         original_filename = re.sub(r'[^\w\-_\.]', '_', original_filename)
         
-        # Build the path: images/<page_route>/<filename>
-        image_dir = os.path.join(self.output_dir, 'images', page_route)
+        # Build the path: uploads/<page_route>/<filename>
+        image_dir = os.path.join(self.output_dir, 'uploads', page_route)
         local_path = os.path.join(image_dir, original_filename)
         
         return local_path, original_filename
@@ -137,10 +137,10 @@ class ReactomeScraper:
             return None
         
         # Check if already downloaded
-        if img_url in self.downloaded_images:
+        if img_url in self.downloaded_uploads:
             local_path, filename = self.get_image_local_path(img_url, page_route)
             # Return relative path from page to image
-            return os.path.join('images', page_route, filename)
+            return os.path.join('uploads', page_route, filename)
         
         try:
             response = self.session.get(img_url, timeout=REQUEST_TIMEOUT, stream=True)
@@ -162,11 +162,11 @@ class ReactomeScraper:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
             
-            self.downloaded_images.add(img_url)
+            self.downloaded_uploads.add(img_url)
             logger.info(f"Downloaded image: {img_url} -> {local_path}")
             
             # Return relative path from page to image
-            return os.path.join('images', page_route, filename)
+            return os.path.join('uploads', page_route, filename)
             
         except requests.exceptions.RequestException as e:
             logger.warning(f"Failed to download image {img_url}: {e}")
@@ -175,9 +175,9 @@ class ReactomeScraper:
             logger.warning(f"Error saving image {img_url}: {e}")
             return None
     
-    def process_images_in_content(self, soup, current_url, page_route):
+    def process_uploads_in_content(self, soup, current_url, page_route):
         """
-        Find all images in the content, download them, and update src attributes.
+        Find all uploads in the content, download them, and update src attributes.
         Returns the modified soup.
         """
         for img in soup.find_all('img'):
@@ -248,8 +248,8 @@ class ReactomeScraper:
         # Find <div class="item-page">
         item_page = soup.find('div', class_='item-page')
         if item_page:
-            # Process images in this content
-            self.process_images_in_content(item_page, url, page_route)
+            # Process uploads in this content
+            self.process_uploads_in_content(item_page, url, page_route)
             item_page_content = str(item_page)
             logger.debug(f"Found item-page in {url}")
         
@@ -265,8 +265,8 @@ class ReactomeScraper:
             blog_posts = soup.find_all('div', class_=re.compile(r'^leading-\d+$'))
         
         for post in blog_posts:
-            # Process images in this content
-            self.process_images_in_content(post, url, page_route)
+            # Process uploads in this content
+            self.process_uploads_in_content(post, url, page_route)
             blog_post_content.append(str(post))
             logger.debug(f"Found blogpost in {url}")
         

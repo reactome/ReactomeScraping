@@ -12,14 +12,14 @@ import re
 from pathlib import Path
 
 MDX_DIR = Path("mdx_pages")
-IMAGES_DIR = MDX_DIR / "images"
+uploads_DIR = MDX_DIR / "uploads"
 
 def build_image_index():
-    """Build an index of all images by filename and also by parent folder name."""
+    """Build an index of all uploads by filename and also by parent folder name."""
     image_index = {}
     path_index = {}  # Full path -> relative path mapping
     
-    for root, dirs, files in os.walk(IMAGES_DIR):
+    for root, dirs, files in os.walk(uploads_DIR):
         for f in files:
             if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.emf')):
                 full_path = Path(root) / f
@@ -39,7 +39,7 @@ def build_image_index():
                 parent = Path(root).name
                 if stem == parent or stem.replace('-', '_') == parent.replace('-', '_'):
                     # This might be a flattened file
-                    # e.g., images/documentation/inferred-events.png was images/documentation/inferred-events/something.png
+                    # e.g., uploads/documentation/inferred-events.png was uploads/documentation/inferred-events/something.png
                     pass
     
     return image_index, path_index
@@ -72,10 +72,10 @@ def find_best_match(old_path, image_index, path_index):
         return '/' + best_match
     
     # Check if this is a flattened path
-    # e.g., /images/documentation/inferred-events/reaction_release_stats.png
-    # -> /images/documentation/inferred-events.png
+    # e.g., /uploads/documentation/inferred-events/reaction_release_stats.png
+    # -> /uploads/documentation/inferred-events.png
     parts = old_path.split('/')
-    if len(parts) >= 4:  # /images/category/folder/file.png
+    if len(parts) >= 4:  # /uploads/category/folder/file.png
         # Try the folder name as the filename
         folder_name = parts[-2]  # The folder containing the file
         ext = Path(filename).suffix
@@ -138,10 +138,10 @@ def fix_image_paths_in_file(mdx_file, image_index, path_index):
         
         return match.group(0)
     
-    # Pattern for markdown images
-    content = re.sub(r'!\[([^\]]*)\]\((/images/[^)]+)\)', fix_md_image, content)
+    # Pattern for markdown uploads
+    content = re.sub(r'!\[([^\]]*)\]\((/uploads/[^)]+)\)', fix_md_image, content)
     # Pattern for HTML img tags
-    content = re.sub(r'src="(/images/[^"]+)"', fix_html_src, content)
+    content = re.sub(r'src="(/uploads/[^"]+)"', fix_html_src, content)
     
     if content != original_content:
         with open(mdx_file, 'w', encoding='utf-8') as f:
@@ -170,7 +170,7 @@ def main():
     
     print(f"\nDone! Checked {checked_count} MDX files, fixed {fixed_count}")
     
-    # Report still missing images
+    # Report still missing uploads
     print("\nChecking for still-missing image references...")
     missing = set()
     for root, dirs, files in os.walk(MDX_DIR):
@@ -180,7 +180,7 @@ def main():
                 with open(mdx_file, 'r') as mf:
                     content = mf.read()
                 # Find all image paths
-                for match in re.finditer(r'/images/[^)"\'>\s]+', content):
+                for match in re.finditer(r'/uploads/[^)"\'>\s]+', content):
                     path = match.group(0)
                     check_path = MDX_DIR / path.lstrip('/')
                     if not check_path.exists():

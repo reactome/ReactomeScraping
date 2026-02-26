@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Reorganize mdx_pages to match the nav structure.
-Also handles moving corresponding images from the images directory.
+Also handles moving corresponding uploads from the uploads directory.
 """
 
 import os
@@ -9,7 +9,7 @@ import re
 import shutil
 
 MDX_DIR = "mdx_pages"
-IMAGES_DIR = os.path.join(MDX_DIR, "images")
+uploads_DIR = os.path.join(MDX_DIR, "uploads")
 
 # Define moves: (source, destination)
 # Paths are relative to MDX_DIR
@@ -44,31 +44,31 @@ MOVES = [
 ]
 
 
-def move_images(src_rel, dst_rel):
-    """Move images from old location to new location to match page reorganization."""
-    src_images = os.path.join(IMAGES_DIR, src_rel)
-    dst_images = os.path.join(IMAGES_DIR, dst_rel)
+def move_uploads(src_rel, dst_rel):
+    """Move uploads from old location to new location to match page reorganization."""
+    src_uploads = os.path.join(uploads_DIR, src_rel)
+    dst_uploads = os.path.join(uploads_DIR, dst_rel)
     
-    if not os.path.exists(src_images):
+    if not os.path.exists(src_uploads):
         return False
     
-    if os.path.exists(dst_images):
-        print(f"Skip images (destination exists): {dst_images}")
+    if os.path.exists(dst_uploads):
+        print(f"Skip uploads (destination exists): {dst_uploads}")
         return False
     
     # Create parent directory if needed
-    os.makedirs(os.path.dirname(dst_images), exist_ok=True)
+    os.makedirs(os.path.dirname(dst_uploads), exist_ok=True)
     
-    # Move the images directory
-    shutil.move(src_images, dst_images)
-    print(f"Moved images: {src_images} -> {dst_images}")
+    # Move the uploads directory
+    shutil.move(src_uploads, dst_uploads)
+    print(f"Moved uploads: {src_uploads} -> {dst_uploads}")
     return True
 
 
 def update_image_paths_in_mdx(dst_path, src_rel, dst_rel):
     """
     Update image paths in MDX files after reorganization.
-    Image paths change from /images/<src_rel>/... to /images/<dst_rel>/...
+    Image paths change from /uploads/<src_rel>/... to /uploads/<dst_rel>/...
     """
     if not os.path.exists(dst_path):
         return
@@ -85,9 +85,9 @@ def update_image_paths_in_mdx(dst_path, src_rel, dst_rel):
                 with open(filepath, 'r', encoding='utf-8') as f:
                     content = f.read()
                 
-                # Replace image paths: /images/<src_rel>/ -> /images/<dst_rel>/
-                old_path = f'/images/{src_rel}/'
-                new_path = f'/images/{dst_rel}/'
+                # Replace image paths: /uploads/<src_rel>/ -> /uploads/<dst_rel>/
+                old_path = f'/uploads/{src_rel}/'
+                new_path = f'/uploads/{dst_rel}/'
                 
                 if old_path in content:
                     updated_content = content.replace(old_path, new_path)
@@ -105,8 +105,8 @@ def main():
         
         if not os.path.exists(src):
             print(f"Skip (not found): {src}")
-            # Still try to move images even if pages don't exist
-            move_images(src_rel, dst_rel)
+            # Still try to move uploads even if pages don't exist
+            move_uploads(src_rel, dst_rel)
             continue
         
         if os.path.exists(dst):
@@ -120,8 +120,8 @@ def main():
         shutil.move(src, dst)
         print(f"Moved: {src} -> {dst}")
         
-        # Move corresponding images
-        move_images(src_rel, dst_rel)
+        # Move corresponding uploads
+        move_uploads(src_rel, dst_rel)
         
         # Update image paths in the moved MDX files
         update_image_paths_in_mdx(dst, src_rel, dst_rel)
