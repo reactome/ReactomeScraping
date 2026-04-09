@@ -362,9 +362,6 @@ python3 fix_categories.py
 
 # 7. Fix any remaining image path issues in MDX files
 python3 fix_mdx_image_paths.py
-
-# 8. Rename remaining item-page.mdx to index.mdx
-python3 rename_to_index.py
 ```
 
 ## Script Descriptions
@@ -378,7 +375,6 @@ python3 rename_to_index.py
 | `flatten_folders.py` | Renames `item-page.mdx` files to parent folder names |
 | `fix_categories.py` | Updates category frontmatter to match file locations |
 | `fix_mdx_image_paths.py` | Fixes image paths in MDX after reorganization |
-| `rename_to_index.py` | Renames remaining `item-page.mdx` to `index.mdx` |
 
 ## Output
 
