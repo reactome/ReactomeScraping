@@ -30,7 +30,7 @@ def get_html_converter():
     """Create and configure html2text converter."""
     h = html2text.HTML2Text()
     h.ignore_links = False
-    h.ignore_images = False
+    h.ignore_uploads = False
     h.ignore_emphasis = False
     h.body_width = 0  # Don't wrap lines
     h.unicode_snob = True
@@ -42,16 +42,16 @@ def get_html_converter():
     return h
 
 
-def copy_images_for_page(input_dir, output_dir, category):
+def copy_uploads_for_page(input_dir, output_dir, category):
     """
-    Copy images from scraped_pages/images/<category> to mdx_pages/images/<category>.
+    Copy uploads from scraped_pages/uploads/<category> to mdx_pages/uploads/<category>.
     Returns the mapping of source to destination paths.
     """
     if not category:
         return {}
     
-    src_image_dir = os.path.join(input_dir, 'images', category)
-    dst_image_dir = os.path.join(output_dir, 'images', category)
+    src_image_dir = os.path.join(input_dir, 'uploads', category)
+    dst_image_dir = os.path.join(output_dir, 'uploads', category)
     
     if not os.path.exists(src_image_dir):
         return {}
@@ -74,22 +74,22 @@ def copy_images_for_page(input_dir, output_dir, category):
 def fix_image_paths_in_html(soup, category, output_dir):
     """
     Update image src attributes to use proper relative paths for MDX.
-    Images are stored at: mdx_pages/images/<category>/<filename>
+    uploads are stored at: mdx_pages/uploads/<category>/<filename>
     MDX files are at: mdx_pages/<category>/<file>.mdx
     
-    So from the MDX file, the relative path to images is: ../images/<category>/<filename>
-    Or we can use absolute paths from the mdx_pages root: /images/<category>/<filename>
+    So from the MDX file, the relative path to uploads is: ../uploads/<category>/<filename>
+    Or we can use absolute paths from the mdx_pages root: /uploads/<category>/<filename>
     """
     for img in soup.find_all('img'):
         src = img.get('src', '')
         
         # Handle paths that were already processed by the scraper
-        # Format: images/<page_route>/<filename>
-        if src.startswith('images/'):
+        # Format: uploads/<page_route>/<filename>
+        if src.startswith('uploads/'):
             # Extract just the filename and rebuild the path
             parts = src.split('/')
             if len(parts) >= 3:
-                # Keep the structure: images/<category>/<filename>
+                # Keep the structure: uploads/<category>/<filename>
                 # This will be converted to markdown and work relative to mdx_pages root
                 img['src'] = '/' + src  # Make it absolute from site root
         
@@ -317,8 +317,8 @@ def convert_file(input_path, output_dir, input_dir):
         title = extract_title(soup)
         category = get_category_from_path(input_path, input_dir)
         
-        # Copy images for this page
-        copy_images_for_page(input_dir, output_dir, category)
+        # Copy uploads for this page
+        copy_uploads_for_page(input_dir, output_dir, category)
         
         # Determine if this is an article or a page
         is_article = is_article_page(input_path, category)

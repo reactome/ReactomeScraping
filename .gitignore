@@ -1,11 +1,9 @@
 # Scraped HTML files
 scraped_pages/
-input/
-What%20is%20Reactome*
 
 # Converted MDX files
 mdx_pages/
-output/
+formatted_pages/
 
 # Logs
 *.log
@@ -19,3 +17,4 @@ venv/
 
 # Original HTML sample
 What\ is\ Reactome*
+What%20is%20Reactome*
